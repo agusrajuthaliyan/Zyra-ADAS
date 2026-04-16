@@ -652,42 +652,44 @@ class _PermissionPanel extends StatelessWidget {
   final bool requesting;
   final VoidCallback onRetry;
 
-  @override
+@override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     final bool cameraOk = result?.cameraGranted ?? false;
     final bool locationOk = result?.locationGranted ?? false;
     return Padding(
       padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          const SizedBox(height: 16),
-          Text('Permissions needed', style: theme.textTheme.headlineMedium),
-          const SizedBox(height: 16),
-          _PermissionRow(label: 'Camera', granted: cameraOk, required: true),
-          const SizedBox(height: 8),
-          _PermissionRow(
-              label: 'Location', granted: locationOk, required: false),
-          const SizedBox(height: 24),
-          if (requesting)
-            const Center(child: CircularProgressIndicator())
-          else
-            Center(
-              child: FilledButton.icon(
-                onPressed: onRetry,
-                icon: const Icon(Icons.refresh_rounded),
-                label: const Text('Request again'),
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            const SizedBox(height: 16),
+            Text('Permissions needed', style: theme.textTheme.headlineMedium),
+            const SizedBox(height: 16),
+            _PermissionRow(label: 'Camera', granted: cameraOk, required: true),
+            const SizedBox(height: 8),
+            _PermissionRow(
+                label: 'Location', granted: locationOk, required: false),
+            const SizedBox(height: 24),
+            if (requesting)
+              const Center(child: CircularProgressIndicator())
+            else
+              Center(
+                child: FilledButton.icon(
+                  onPressed: onRetry,
+                  icon: const Icon(Icons.refresh_rounded),
+                  label: const Text('Request again'),
+                ),
               ),
+            const SizedBox(height: 16),
+            Text(
+              'Camera access is required for perception. Location is optional '
+              'and unlocks GPS-based speed + heading in later phases.',
+              style: theme.textTheme.bodyMedium
+                  ?.copyWith(color: ZyraTheme.onSurfaceMuted),
             ),
-          const SizedBox(height: 16),
-          Text(
-            'Camera access is required for perception. Location is optional '
-            'and unlocks GPS-based speed + heading in later phases.',
-            style: theme.textTheme.bodyMedium
-                ?.copyWith(color: ZyraTheme.onSurfaceMuted),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

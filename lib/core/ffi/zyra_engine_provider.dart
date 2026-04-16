@@ -39,11 +39,33 @@ class ZyraEngineNotifier extends AsyncNotifier<ZyraEngine> {
 
     final ZyraEngine engine = ZyraEngine.create(lib);
     try {
-      engine.loadModel(
-        paramPath: paths.paramPath,
-        binPath: paths.binPath,
-        useVulkan: true,
-      );
+      // Attempt 1: Vulkan (GPU). On many devices the Vulkan driver initialises
+      // fine but NCNN's shader compilation fails on the first real load — code
+      // -3 from zyra_engine_load_model means detector_.load() returned false.
+      // Retry with CPU so the app stays functional regardless of GPU support.
+      bool loaded = false;
+      try {
+        if (kDebugMode) debugPrint('[Zyra] loading model with Vulkan…');
+        engine.loadModel(
+          paramPath: paths.paramPath,
+          binPath: paths.binPath,
+          useVulkan: true,
+        );
+        loaded = true;
+        if (kDebugMode) debugPrint('[Zyra] model loaded (Vulkan)');
+      } on ZyraEngineException catch (e) {
+        if (kDebugMode) {
+          debugPrint('[Zyra] Vulkan load failed ($e) — retrying with CPU');
+        }
+      }
+      if (!loaded) {
+        engine.loadModel(
+          paramPath: paths.paramPath,
+          binPath: paths.binPath,
+          useVulkan: false,
+        );
+        if (kDebugMode) debugPrint('[Zyra] model loaded (CPU fallback)');
+      }
       engine.warmup();
     } catch (_) {
       engine.dispose();

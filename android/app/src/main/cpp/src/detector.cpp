@@ -104,6 +104,27 @@ bool NcnnYoloV8Detector::load(const std::string& param_path,
   vulkan_active_ = false;
   use_vulkan_ = use_vulkan;
 
+  // Pre-flight: confirm both files are readable before handing paths to
+  // NCNN. NCNN's error path just returns -1 from load_param/load_model
+  // without distinguishing "file missing" from "parse error", so this
+  // log line is the fastest way to tell the two apart in logcat.
+  {
+    FILE* fp = std::fopen(param_path.c_str(), "rb");
+    if (fp == nullptr) {
+      ZYRA_LOGE("param file not found / not readable: %s", param_path.c_str());
+      return false;
+    }
+    std::fclose(fp);
+  }
+  {
+    FILE* fp = std::fopen(bin_path.c_str(), "rb");
+    if (fp == nullptr) {
+      ZYRA_LOGE("bin file not found / not readable: %s", bin_path.c_str());
+      return false;
+    }
+    std::fclose(fp);
+  }
+
   // Options must be set BEFORE load_param / load_model. NCNN copies them
   // into each layer during parsing.
   ncnn::Option opt;
@@ -118,11 +139,11 @@ bool NcnnYoloV8Detector::load(const std::string& param_path,
   net_.opt = opt;
 
   if (net_.load_param(param_path.c_str()) != 0) {
-    ZYRA_LOGE("load_param failed: %s", param_path.c_str());
+    ZYRA_LOGE("load_param failed (NCNN parse error): %s", param_path.c_str());
     return false;
   }
   if (net_.load_model(bin_path.c_str()) != 0) {
-    ZYRA_LOGE("load_model failed: %s", bin_path.c_str());
+    ZYRA_LOGE("load_model failed (NCNN parse error): %s", bin_path.c_str());
     net_.clear();
     return false;
   }

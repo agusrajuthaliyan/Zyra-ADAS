@@ -44,6 +44,12 @@ class AssetBootstrap {
     await _tryDelete(File(
         '${modelDir.path}${Platform.pathSeparator}yolov8n.ncnn.bin'));
 
+    // Clean up any leftover .tmp files from a previous crash mid-extraction.
+    await _tryDelete(File(
+        '${modelDir.path}${Platform.pathSeparator}yolov8s.ncnn.param.tmp'));
+    await _tryDelete(File(
+        '${modelDir.path}${Platform.pathSeparator}yolov8s.ncnn.bin.tmp'));
+
     await _copyIfStale(_paramAsset, paramFile);
     await _copyIfStale(_binAsset, binFile);
 
@@ -75,10 +81,29 @@ class AssetBootstrap {
       }
     }
 
-    await target.writeAsBytes(
-      data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes),
-      flush: true,
-    );
+    // Write atomically: write to a temp file first, then rename.
+    // This prevents NCNN from opening a half-written file if the app
+    // crashes or is killed mid-extraction (common on first-launch OOM).
+    final File tmp = File('${target.path}.tmp');
+    try {
+      await tmp.writeAsBytes(
+        data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes),
+        flush: true,
+      );
+      // Verify the written size matches before promoting.
+      final int written = await tmp.length();
+      if (written != expectedSize) {
+        throw StateError(
+            '[Zyra] Extracted $assetKey size mismatch: '
+            'expected $expectedSize, got $written');
+      }
+      // Atomic rename — replaces target if it already exists.
+      await tmp.rename(target.path);
+    } catch (e) {
+      // Clean up the temp file on any failure so we retry next launch.
+      await _tryDelete(tmp);
+      rethrow;
+    }
   }
 }
 

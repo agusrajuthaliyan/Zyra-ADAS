@@ -21,7 +21,7 @@ android {
 
     defaultConfig {
         applicationId = "com.zyra.mobile"
-        minSdk = 30
+        minSdk = 29
         targetSdk = 34
         versionCode = flutter.versionCode
         versionName = flutter.versionName
